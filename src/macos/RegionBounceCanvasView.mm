@@ -13,9 +13,7 @@ using region_bounce::Simulation;
 @implementation RegionBounceCanvasView {
   std::unique_ptr<Simulation> _simulation;
   NSInteger _regions;
-  NSInteger _particles;
   NSInteger _gridColumns;
-  NSInteger _resistance;
   double _speed;
   NSTimeInterval _reseedSeconds;
   BOOL _showAgents;
@@ -29,9 +27,7 @@ using region_bounce::Simulation;
 - (instancetype)initWithFrame:(NSRect)frame {
   return [self initWithFrame:frame
                      regions:14
-                   particles:8
                  gridColumns:64
-                  resistance:4
                        speed:7.0
                reseedSeconds:12.0 * 60.0
                   showAgents:YES
@@ -42,9 +38,7 @@ using region_bounce::Simulation;
   self = [super initWithCoder:coder];
   if (self) {
     [self applyRegions:14
-             particles:8
            gridColumns:64
-            resistance:4
                  speed:7.0
          reseedSeconds:12.0 * 60.0
             showAgents:YES
@@ -55,9 +49,7 @@ using region_bounce::Simulation;
 
 - (instancetype)initWithFrame:(NSRect)frame
                       regions:(NSInteger)regions
-                    particles:(NSInteger)particles
                   gridColumns:(NSInteger)gridColumns
-                   resistance:(NSInteger)resistance
                         speed:(double)speed
                 reseedSeconds:(NSTimeInterval)reseedSeconds
                    showAgents:(BOOL)showAgents
@@ -66,9 +58,7 @@ using region_bounce::Simulation;
   if (self) {
     self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [self applyRegions:regions
-             particles:particles
            gridColumns:gridColumns
-            resistance:resistance
                  speed:speed
          reseedSeconds:reseedSeconds
             showAgents:showAgents
@@ -86,17 +76,13 @@ using region_bounce::Simulation;
 }
 
 - (void)applyRegions:(NSInteger)regions
-           particles:(NSInteger)particles
          gridColumns:(NSInteger)gridColumns
-          resistance:(NSInteger)resistance
                speed:(double)speed
        reseedSeconds:(NSTimeInterval)reseedSeconds
           showAgents:(BOOL)showAgents
              palette:(NSInteger)palette {
   _regions = std::clamp<NSInteger>(regions, 2, 30);
-  _particles = std::clamp<NSInteger>(particles, 1, 24);
   _gridColumns = std::clamp<NSInteger>(gridColumns, 16, 140);
-  _resistance = std::clamp<NSInteger>(resistance, 1, 20);
   _speed = std::clamp(speed, 0.5, 30.0);
   _reseedSeconds = std::clamp<NSTimeInterval>(reseedSeconds, 60.0, 60.0 * 60.0);
   _showAgents = showAgents;
@@ -108,14 +94,13 @@ using region_bounce::Simulation;
   const NSSize size = self.bounds.size;
   const double width = std::max(1.0, static_cast<double>(size.width));
   const double height = std::max(1.0, static_cast<double>(size.height));
-  _currentRows = std::max<NSInteger>(8, std::lround(_gridColumns * height / width));
+  const double cellSize = width / _gridColumns;
+  _currentRows = std::max<NSInteger>(2, std::ceil(height / cellSize));
 
   Configuration configuration;
   configuration.columns = static_cast<int>(_gridColumns);
   configuration.rows = static_cast<int>(_currentRows);
   configuration.regionCount = static_cast<int>(_regions);
-  configuration.agentCount = static_cast<int>(_particles);
-  configuration.resistance = static_cast<int>(_resistance);
   configuration.speed = _speed;
   configuration.palette = static_cast<int>(_palette);
   _simulation = std::make_unique<Simulation>(configuration);
@@ -128,9 +113,8 @@ using region_bounce::Simulation;
   if (size.width <= 0.0 || size.height <= 0.0) {
     return;
   }
-  const NSInteger desiredRows =
-      std::max<NSInteger>(8, std::lround(_gridColumns * static_cast<double>(size.height) /
-                                         static_cast<double>(size.width)));
+  const CGFloat cellSize = size.width / _gridColumns;
+  const NSInteger desiredRows = std::max<NSInteger>(2, std::ceil(size.height / cellSize));
   if (!_simulation || desiredRows != _currentRows) {
     [self rebuildForCurrentBounds];
   }
@@ -185,8 +169,9 @@ using region_bounce::Simulation;
     return;
   }
 
-  const CGFloat cellWidth = self.bounds.size.width / _simulation->columns();
-  const CGFloat cellHeight = self.bounds.size.height / _simulation->rows();
+  const CGFloat cellSize = self.bounds.size.width / _simulation->columns();
+  const CGFloat gridHeight = cellSize * _simulation->rows();
+  const CGFloat originY = (self.bounds.size.height - gridHeight) / 2.0;
   CGContextSetShouldAntialias(context, false);
 
   for (int row = 0; row < _simulation->rows(); ++row) {
@@ -195,22 +180,8 @@ using region_bounce::Simulation;
       const Color base = _simulation->colorForOwner(cell.owner);
       CGContextSetRGBFillColor(context, base.red, base.green, base.blue, 1.0);
       const CGRect cellRect =
-          CGRectMake(column * cellWidth, row * cellHeight, cellWidth + 0.5, cellHeight + 0.5);
+          CGRectMake(column * cellSize, originY + row * cellSize, cellSize + 0.5, cellSize + 0.5);
       CGContextFillRect(context, cellRect);
-
-      if (cell.challenger >= 0 && cell.impacts > 0) {
-        const Color challenge = _simulation->colorForOwner(cell.challenger);
-        const CGFloat progress =
-            std::clamp(static_cast<CGFloat>(cell.impacts) / _simulation->resistance(), 0.0, 1.0);
-        const CGFloat scale = std::sqrt(progress);
-        const CGFloat width = cellWidth * scale;
-        const CGFloat height = cellHeight * scale;
-        const CGRect contested = CGRectMake(CGRectGetMidX(cellRect) - width / 2.0,
-                                            CGRectGetMidY(cellRect) - height / 2.0, width, height);
-        CGContextSetRGBFillColor(context, challenge.red * 0.86, challenge.green * 0.86,
-                                 challenge.blue * 0.86, 1.0);
-        CGContextFillRect(context, contested);
-      }
     }
   }
 
@@ -219,9 +190,9 @@ using region_bounce::Simulation;
   }
 
   CGContextSetShouldAntialias(context, true);
-  const CGFloat radius = std::max<CGFloat>(2.0, std::min(cellWidth, cellHeight) * 0.28);
+  const CGFloat radius = std::max<CGFloat>(2.0, cellSize * 0.28);
   for (const region_bounce::Agent &agent : _simulation->agents()) {
-    const CGPoint center = CGPointMake(agent.x * cellWidth, agent.y * cellHeight);
+    const CGPoint center = CGPointMake(agent.x * cellSize, originY + agent.y * cellSize);
     if (agent.flash > 0.0) {
       const CGFloat ringRadius = radius * (1.7 + agent.flash * 1.8);
       CGContextSetLineWidth(context, std::max<CGFloat>(1.0, radius * 0.22));

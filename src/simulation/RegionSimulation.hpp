@@ -14,8 +14,6 @@ struct Color {
 
 struct Cell {
   int owner = -1;
-  int challenger = -1;
-  int impacts = 0;
 };
 
 struct Agent {
@@ -31,8 +29,6 @@ struct Configuration {
   int columns = 64;
   int rows = 40;
   int regionCount = 14;
-  int agentCount = 8;
-  int resistance = 4;
   double speed = 7.0;
   int palette = 0;
 };
@@ -53,7 +49,6 @@ public:
   [[nodiscard]] int columns() const { return configuration_.columns; }
   [[nodiscard]] int rows() const { return configuration_.rows; }
   [[nodiscard]] int regionCount() const { return configuration_.regionCount; }
-  [[nodiscard]] int resistance() const { return configuration_.resistance; }
   [[nodiscard]] std::uint64_t seed() const { return seed_; }
   [[nodiscard]] const Cell &cell(int column, int row) const;
   [[nodiscard]] const std::vector<Cell> &cells() const { return cells_; }

@@ -83,8 +83,6 @@ Simulation::Simulation(Configuration configuration, std::uint64_t seed)
   }
   const int cellCount = configuration_.columns * configuration_.rows;
   configuration_.regionCount = std::clamp(configuration_.regionCount, 1, cellCount);
-  configuration_.agentCount = std::max(configuration_.agentCount, 1);
-  configuration_.resistance = std::max(configuration_.resistance, 1);
   configuration_.speed = std::clamp(configuration_.speed, 0.2, 80.0);
   configuration_.palette =
       std::clamp(configuration_.palette, 0, static_cast<int>(kPalettes.size()) - 1);
@@ -184,13 +182,21 @@ void Simulation::initializeRegions() {
 
 void Simulation::initializeAgents() {
   agents_.clear();
-  agents_.reserve(static_cast<std::size_t>(configuration_.agentCount));
+  agents_.reserve(static_cast<std::size_t>(configuration_.regionCount));
 
-  for (int index = 0; index < configuration_.agentCount; ++index) {
-    const int column = std::min(static_cast<int>(randomUnit() * configuration_.columns),
-                                configuration_.columns - 1);
-    const int row =
-        std::min(static_cast<int>(randomUnit() * configuration_.rows), configuration_.rows - 1);
+  std::vector<std::vector<int>> cellsByRegion(static_cast<std::size_t>(configuration_.regionCount));
+  for (int index = 0; index < static_cast<int>(cells_.size()); ++index) {
+    const int owner = cells_[static_cast<std::size_t>(index)].owner;
+    cellsByRegion[static_cast<std::size_t>(owner)].push_back(index);
+  }
+
+  for (int region = 0; region < configuration_.regionCount; ++region) {
+    const std::vector<int> &regionCells = cellsByRegion[static_cast<std::size_t>(region)];
+    const std::size_t offset = std::min(static_cast<std::size_t>(randomUnit() * regionCells.size()),
+                                        regionCells.size() - 1);
+    const int cellIndex = regionCells[offset];
+    const int column = cellIndex % configuration_.columns;
+    const int row = cellIndex / configuration_.columns;
     double angle = randomUnit() * 2.0 * kPi;
     while (std::abs(std::cos(angle)) < 0.32 || std::abs(std::sin(angle)) < 0.32) {
       angle = randomUnit() * 2.0 * kPi;
@@ -203,7 +209,7 @@ void Simulation::initializeAgents() {
                          configuration_.rows - kAgentRadius);
     agent.velocityX = std::cos(angle) * configuration_.speed;
     agent.velocityY = std::sin(angle) * configuration_.speed;
-    agent.owner = cell(column, row).owner;
+    agent.owner = region;
     agents_.push_back(agent);
   }
 }
@@ -215,25 +221,9 @@ bool Simulation::applyImpact(int column, int row, int attacker) {
 
   Cell &target = cells_[static_cast<std::size_t>(indexFor(column, row))];
   if (target.owner == attacker) {
-    target.challenger = -1;
-    target.impacts = 0;
     return false;
   }
-
-  if (target.challenger == attacker) {
-    ++target.impacts;
-  } else {
-    target.challenger = attacker;
-    target.impacts = 1;
-  }
-
-  if (target.impacts < configuration_.resistance) {
-    return false;
-  }
-
   target.owner = attacker;
-  target.challenger = -1;
-  target.impacts = 0;
   ++statistics_.conversions;
   return true;
 }
@@ -299,7 +289,20 @@ void Simulation::advanceSubstep(double elapsedSeconds) {
 Color Simulation::colorForOwner(int owner) const {
   const Palette &palette = kPalettes[static_cast<std::size_t>(configuration_.palette)];
   const int safeOwner = owner < 0 ? 0 : owner;
-  return palette[static_cast<std::size_t>(safeOwner) % palette.size()];
+  Color color = palette[static_cast<std::size_t>(safeOwner) % palette.size()];
+  const int variation = safeOwner / static_cast<int>(palette.size());
+  if (variation == 1) {
+    constexpr double kLighten = 0.16;
+    color.red += (1.0 - color.red) * kLighten;
+    color.green += (1.0 - color.green) * kLighten;
+    color.blue += (1.0 - color.blue) * kLighten;
+  } else if (variation >= 2) {
+    constexpr double kDarken = 0.78;
+    color.red *= kDarken;
+    color.green *= kDarken;
+    color.blue *= kDarken;
+  }
+  return color;
 }
 
 } // namespace region_bounce

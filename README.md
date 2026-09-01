@@ -1,6 +1,6 @@
 # RegionBounce
 
-RegionBounce is a native macOS screen saver where moving particles reshape a map of connected color territories. Each particle carries its starting region's color, rebounds from foreign boundaries, and gradually converts cells after repeated impacts.
+RegionBounce is a native macOS screen saver where moving balls reshape a pixel map of connected color territories. Every region starts with exactly one ball carrying that region's color. When a ball hits a foreign boundary, that square pixel immediately changes to the ball's color.
 
 Every world starts from randomly placed seeds that grow into connected, irregular regions. The result is less like a random checkerboard and more like a tiny evolving map.
 
@@ -11,8 +11,10 @@ Every world starts from randomly placed seeds that grow into connected, irregula
 - Native universal `arm64` and `x86_64` `.saver` bundle
 - Standalone preview app with **World → New World** (`⌘N`) and full-screen mode
 - Connected random starting regions generated with randomized multi-source growth
+- One ball per starting region and immediate single-pixel conversion on every boundary collision
+- Equal-size square cells across the entire map, with edge pixels clipped rather than stretched
 - Four palettes: Earth, Sorbet, Ocean, and Monochrome
-- Screen saver settings for regions, particles, grid size, conversion resistance, speed, automatic reseeding, and particle visibility
+- Screen saver settings for regions, grid size, speed, automatic reseeding, and ball visibility
 - Deterministic, platform-independent C++ simulation with connectivity and lifecycle tests
 - Silent operation, suitable for a screen saver
 
@@ -38,9 +40,9 @@ To install the screen saver, open `build-release/RegionBounce.saver` in Finder o
 
 1. Random seed cells are assigned distinct region identities.
 2. A randomized frontier grows each seed one neighboring cell at a time. Every resulting starting region is connected.
-3. Particles spawn inside the completed map and inherit the region beneath them.
-4. A particle bounces when its leading edge encounters another region and applies one impact to that boundary cell.
-5. Once the cell's resistance is exhausted, it switches ownership. The contested square drawn inside a cell shows conversion progress.
+3. Exactly one ball spawns inside each completed region and carries that region's color.
+4. A ball bounces when its leading edge encounters another region, immediately converting that one boundary pixel.
+5. The map is drawn as equal-size squares. It slightly overscans and clips the top and bottom edge when the viewport's aspect ratio does not divide evenly.
 6. The world is regenerated after the configured interval.
 
 ## Inspiration

@@ -6,9 +6,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)initWithFrame:(NSRect)frame
                       regions:(NSInteger)regions
-                    particles:(NSInteger)particles
                   gridColumns:(NSInteger)gridColumns
-                   resistance:(NSInteger)resistance
                         speed:(double)speed
                 reseedSeconds:(NSTimeInterval)reseedSeconds
                    showAgents:(BOOL)showAgents
@@ -22,9 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)tick;
 - (void)reseed;
 - (void)applyRegions:(NSInteger)regions
-           particles:(NSInteger)particles
          gridColumns:(NSInteger)gridColumns
-          resistance:(NSInteger)resistance
                speed:(double)speed
        reseedSeconds:(NSTimeInterval)reseedSeconds
           showAgents:(BOOL)showAgents

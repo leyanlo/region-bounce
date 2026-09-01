@@ -23,8 +23,6 @@ region_bounce::Configuration baseConfiguration() {
   configuration.columns = 36;
   configuration.rows = 24;
   configuration.regionCount = 12;
-  configuration.agentCount = 7;
-  configuration.resistance = 3;
   configuration.speed = 8.0;
   return configuration;
 }
@@ -98,16 +96,28 @@ void testStartingRegionsAreConnected() {
   }
 }
 
-void testResistanceControlsConversion() {
-  auto configuration = baseConfiguration();
-  configuration.resistance = 3;
-  region_bounce::Simulation simulation(configuration, 42);
+void testEachRegionStartsWithOneAgent() {
+  region_bounce::Simulation simulation(baseConfiguration(), 24680);
+  expect(simulation.agents().size() == static_cast<std::size_t>(simulation.regionCount()),
+         "the simulation creates exactly one agent per region");
+  std::vector<int> agentsByRegion(static_cast<std::size_t>(simulation.regionCount()), 0);
+  for (const auto &agent : simulation.agents()) {
+    ++agentsByRegion[static_cast<std::size_t>(agent.owner)];
+    const int column = static_cast<int>(std::floor(agent.x));
+    const int row = static_cast<int>(std::floor(agent.y));
+    expect(simulation.cell(column, row).owner == agent.owner,
+           "each agent starts inside its own region");
+  }
+  for (const int count : agentsByRegion) {
+    expect(count == 1, "each region starts with exactly one agent");
+  }
+}
+
+void testFirstImpactConvertsBoundaryCell() {
+  region_bounce::Simulation simulation(baseConfiguration(), 42);
   const int original = simulation.cell(0, 0).owner;
   const int attacker = (original + 1) % simulation.regionCount();
-  expect(!simulation.applyImpact(0, 0, attacker), "first impact does not convert a resistant cell");
-  expect(!simulation.applyImpact(0, 0, attacker),
-         "second impact does not convert a resistant cell");
-  expect(simulation.applyImpact(0, 0, attacker), "final required impact converts the cell");
+  expect(simulation.applyImpact(0, 0, attacker), "the first impact converts a foreign cell");
   expect(simulation.cell(0, 0).owner == attacker, "conversion changes ownership");
   expect(simulation.statistics().conversions == 1, "conversion is counted once");
 }
@@ -133,7 +143,8 @@ void testAgentsStayInsideTheGrid() {
 int main() {
   testDeterministicWorlds();
   testStartingRegionsAreConnected();
-  testResistanceControlsConversion();
+  testEachRegionStartsWithOneAgent();
+  testFirstImpactConvertsBoundaryCell();
   testAgentsStayInsideTheGrid();
   if (failures == 0) {
     std::cout << "All RegionSimulation tests passed\n";
