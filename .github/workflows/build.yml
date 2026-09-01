@@ -1,0 +1,28 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Verify universal bundles
+        run: |
+          codesign --force --deep --sign - build/RegionBounce.saver
+          codesign --force --deep --sign - build/RegionBounce.app
+          codesign --verify --deep --strict --verbose=2 build/RegionBounce.saver
+          codesign --verify --deep --strict --verbose=2 build/RegionBounce.app
+          lipo build/RegionBounce.saver/Contents/MacOS/RegionBounce -verify_arch arm64 x86_64
+          lipo build/RegionBounce.app/Contents/MacOS/RegionBounce -verify_arch arm64 x86_64
