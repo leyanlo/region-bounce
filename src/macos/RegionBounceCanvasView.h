@@ -5,7 +5,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface RegionBounceCanvasView : NSView
 
 - (instancetype)initWithFrame:(NSRect)frame
-                      regions:(NSInteger)regions
+                    mapColors:(NSInteger)mapColors
                   gridColumns:(NSInteger)gridColumns
                         speed:(double)speed
                 reseedSeconds:(NSTimeInterval)reseedSeconds
@@ -19,12 +19,12 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)stopAnimating;
 - (void)tick;
 - (void)reseed;
-- (void)applyRegions:(NSInteger)regions
-         gridColumns:(NSInteger)gridColumns
-               speed:(double)speed
-       reseedSeconds:(NSTimeInterval)reseedSeconds
-          showAgents:(BOOL)showAgents
-             palette:(NSInteger)palette;
+- (void)applyMapColors:(NSInteger)mapColors
+           gridColumns:(NSInteger)gridColumns
+                 speed:(double)speed
+         reseedSeconds:(NSTimeInterval)reseedSeconds
+            showAgents:(BOOL)showAgents
+               palette:(NSInteger)palette;
 
 @end
 

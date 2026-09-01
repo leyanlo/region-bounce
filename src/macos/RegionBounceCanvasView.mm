@@ -12,7 +12,7 @@ using region_bounce::Simulation;
 
 @implementation RegionBounceCanvasView {
   std::unique_ptr<Simulation> _simulation;
-  NSInteger _regions;
+  NSInteger _mapColors;
   NSInteger _gridColumns;
   double _speed;
   NSTimeInterval _reseedSeconds;
@@ -26,8 +26,8 @@ using region_bounce::Simulation;
 
 - (instancetype)initWithFrame:(NSRect)frame {
   return [self initWithFrame:frame
-                     regions:14
-                 gridColumns:64
+                   mapColors:12
+                 gridColumns:20
                        speed:7.0
                reseedSeconds:12.0 * 60.0
                   showAgents:YES
@@ -37,18 +37,18 @@ using region_bounce::Simulation;
 - (nullable instancetype)initWithCoder:(NSCoder *)coder {
   self = [super initWithCoder:coder];
   if (self) {
-    [self applyRegions:14
-           gridColumns:64
-                 speed:7.0
-         reseedSeconds:12.0 * 60.0
-            showAgents:YES
-               palette:0];
+    [self applyMapColors:12
+             gridColumns:20
+                   speed:7.0
+           reseedSeconds:12.0 * 60.0
+              showAgents:YES
+                 palette:0];
   }
   return self;
 }
 
 - (instancetype)initWithFrame:(NSRect)frame
-                      regions:(NSInteger)regions
+                    mapColors:(NSInteger)mapColors
                   gridColumns:(NSInteger)gridColumns
                         speed:(double)speed
                 reseedSeconds:(NSTimeInterval)reseedSeconds
@@ -57,12 +57,12 @@ using region_bounce::Simulation;
   self = [super initWithFrame:frame];
   if (self) {
     self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    [self applyRegions:regions
-           gridColumns:gridColumns
-                 speed:speed
-         reseedSeconds:reseedSeconds
-            showAgents:showAgents
-               palette:palette];
+    [self applyMapColors:mapColors
+             gridColumns:gridColumns
+                   speed:speed
+           reseedSeconds:reseedSeconds
+              showAgents:showAgents
+                 palette:palette];
   }
   return self;
 }
@@ -75,14 +75,14 @@ using region_bounce::Simulation;
   return YES;
 }
 
-- (void)applyRegions:(NSInteger)regions
-         gridColumns:(NSInteger)gridColumns
-               speed:(double)speed
-       reseedSeconds:(NSTimeInterval)reseedSeconds
-          showAgents:(BOOL)showAgents
-             palette:(NSInteger)palette {
-  _regions = std::clamp<NSInteger>(regions, 2, 30);
-  _gridColumns = std::clamp<NSInteger>(gridColumns, 16, 140);
+- (void)applyMapColors:(NSInteger)mapColors
+           gridColumns:(NSInteger)gridColumns
+                 speed:(double)speed
+         reseedSeconds:(NSTimeInterval)reseedSeconds
+            showAgents:(BOOL)showAgents
+               palette:(NSInteger)palette {
+  _mapColors = std::clamp<NSInteger>(mapColors, 3, 30);
+  _gridColumns = std::clamp<NSInteger>(gridColumns, 8, 96);
   _speed = std::clamp(speed, 0.5, 30.0);
   _reseedSeconds = std::clamp<NSTimeInterval>(reseedSeconds, 60.0, 60.0 * 60.0);
   _showAgents = showAgents;
@@ -100,7 +100,7 @@ using region_bounce::Simulation;
   Configuration configuration;
   configuration.columns = static_cast<int>(_gridColumns);
   configuration.rows = static_cast<int>(_currentRows);
-  configuration.regionCount = static_cast<int>(_regions);
+  configuration.mapColorCount = static_cast<int>(_mapColors);
   configuration.speed = _speed;
   configuration.palette = static_cast<int>(_palette);
   _simulation = std::make_unique<Simulation>(configuration);

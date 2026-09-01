@@ -4,8 +4,8 @@
 
 namespace {
 
-NSString *const kRegionCountKey = @"RegionCount";
-NSString *const kGridColumnsKey = @"GridColumns";
+NSString *const kMapColorCountKey = @"MapColorCount";
+NSString *const kGridColumnsKey = @"GridColumnsV2";
 NSString *const kSpeedKey = @"Speed";
 NSString *const kReseedMinutesKey = @"ReseedMinutes";
 NSString *const kShowAgentsKey = @"ShowAgents";
@@ -13,8 +13,8 @@ NSString *const kPaletteKey = @"Palette";
 
 NSDictionary<NSString *, id> *DefaultValues() {
   return @{
-    kRegionCountKey : @14,
-    kGridColumnsKey : @64,
+    kMapColorCountKey : @12,
+    kGridColumnsKey : @20,
     kSpeedKey : @7.0,
     kReseedMinutesKey : @12,
     kShowAgentsKey : @YES,
@@ -53,7 +53,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
 @interface RegionBounceSaverView : ScreenSaverView
 @property(nonatomic, strong) RegionBounceCanvasView *canvas;
 @property(nonatomic, strong) NSPanel *settingsPanel;
-@property(nonatomic, strong) NSTextField *regionsField;
+@property(nonatomic, strong) NSTextField *mapColorsField;
 @property(nonatomic, strong) NSTextField *columnsField;
 @property(nonatomic, strong) NSTextField *speedField;
 @property(nonatomic, strong) NSTextField *reseedField;
@@ -84,7 +84,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
   ScreenSaverDefaults *defaults = [self preferences];
   self.canvas =
       [[RegionBounceCanvasView alloc] initWithFrame:self.bounds
-                                            regions:[defaults integerForKey:kRegionCountKey]
+                                          mapColors:[defaults integerForKey:kMapColorCountKey]
                                         gridColumns:[defaults integerForKey:kGridColumnsKey]
                                               speed:[defaults doubleForKey:kSpeedKey]
                                       reseedSeconds:[defaults doubleForKey:kReseedMinutesKey] * 60.0
@@ -128,8 +128,8 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
                                                       defer:NO];
   self.settingsPanel.title = @"RegionBounce Settings";
 
-  self.regionsField = IntegerField(14, 2, 30);
-  self.columnsField = IntegerField(64, 16, 140);
+  self.mapColorsField = IntegerField(12, 3, 30);
+  self.columnsField = IntegerField(20, 8, 96);
   self.speedField = DecimalField(7.0, 0.5, 30.0);
   self.reseedField = IntegerField(12, 1, 60);
   self.agentsCheckbox = [NSButton checkboxWithTitle:@"Show moving balls" target:nil action:nil];
@@ -137,7 +137,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
   [self.palettePopup addItemsWithTitles:@[ @"Earth", @"Sorbet", @"Ocean", @"Monochrome" ]];
 
   NSGridView *grid = [NSGridView gridViewWithViews:@[
-    @[ Label(@"Regions (one ball each)"), self.regionsField ],
+    @[ Label(@"Random starting colors"), self.mapColorsField ],
     @[ Label(@"Grid columns"), self.columnsField ],
     @[ Label(@"Ball speed"), self.speedField ],
     @[ Label(@"New world after (minutes)"), self.reseedField ],
@@ -152,7 +152,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
   title.font = [NSFont systemFontOfSize:22.0 weight:NSFontWeightSemibold];
   NSTextField *subtitle = [NSTextField
       labelWithString:
-          @"Each region starts with one ball; every boundary collision converts one pixel."];
+          @"Three balls carry distinct colors and gradually replace the randomized map."];
   subtitle.textColor = NSColor.secondaryLabelColor;
 
   NSButton *cancel = [NSButton buttonWithTitle:@"Cancel"
@@ -189,7 +189,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
 
 - (void)populateSettingsFields {
   ScreenSaverDefaults *defaults = [self preferences];
-  self.regionsField.integerValue = [defaults integerForKey:kRegionCountKey];
+  self.mapColorsField.integerValue = [defaults integerForKey:kMapColorCountKey];
   self.columnsField.integerValue = [defaults integerForKey:kGridColumnsKey];
   self.speedField.doubleValue = [defaults doubleForKey:kSpeedKey];
   self.reseedField.integerValue = [defaults integerForKey:kReseedMinutesKey];
@@ -201,7 +201,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
 - (void)saveSettings:(id)sender {
   (void)sender;
   ScreenSaverDefaults *defaults = [self preferences];
-  [defaults setInteger:self.regionsField.integerValue forKey:kRegionCountKey];
+  [defaults setInteger:self.mapColorsField.integerValue forKey:kMapColorCountKey];
   [defaults setInteger:self.columnsField.integerValue forKey:kGridColumnsKey];
   [defaults setDouble:self.speedField.doubleValue forKey:kSpeedKey];
   [defaults setInteger:self.reseedField.integerValue forKey:kReseedMinutesKey];
@@ -209,12 +209,12 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
   [defaults setInteger:self.palettePopup.indexOfSelectedItem forKey:kPaletteKey];
   [defaults synchronize];
 
-  [self.canvas applyRegions:self.regionsField.integerValue
-                gridColumns:self.columnsField.integerValue
-                      speed:self.speedField.doubleValue
-              reseedSeconds:self.reseedField.doubleValue * 60.0
-                 showAgents:self.agentsCheckbox.state == NSControlStateValueOn
-                    palette:self.palettePopup.indexOfSelectedItem];
+  [self.canvas applyMapColors:self.mapColorsField.integerValue
+                  gridColumns:self.columnsField.integerValue
+                        speed:self.speedField.doubleValue
+                reseedSeconds:self.reseedField.doubleValue * 60.0
+                   showAgents:self.agentsCheckbox.state == NSControlStateValueOn
+                      palette:self.palettePopup.indexOfSelectedItem];
   [NSApp endSheet:self.settingsPanel returnCode:NSModalResponseOK];
 }
 

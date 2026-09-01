@@ -14,6 +14,7 @@ namespace {
 constexpr double kAgentRadius = 0.28;
 constexpr double kMaximumSubstep = 1.0 / 120.0;
 constexpr double kPi = 3.14159265358979323846;
+constexpr int kBallCount = 3;
 
 using Palette = std::array<Color, 12>;
 
@@ -82,7 +83,7 @@ Simulation::Simulation(Configuration configuration, std::uint64_t seed)
     throw std::invalid_argument("The grid must be at least 2 by 2");
   }
   const int cellCount = configuration_.columns * configuration_.rows;
-  configuration_.regionCount = std::clamp(configuration_.regionCount, 1, cellCount);
+  configuration_.mapColorCount = std::clamp(configuration_.mapColorCount, kBallCount, cellCount);
   configuration_.speed = std::clamp(configuration_.speed, 0.2, 80.0);
   configuration_.palette =
       std::clamp(configuration_.palette, 0, static_cast<int>(kPalettes.size()) - 1);
@@ -93,7 +94,7 @@ void Simulation::reset(std::uint64_t seed) {
   seed_ = seed == 0 ? makeSeed() : seed;
   random_.seed(seed_);
   statistics_ = {};
-  initializeRegions();
+  initializeMap();
   initializeAgents();
 }
 
@@ -125,7 +126,7 @@ double Simulation::randomUnit() {
   return std::generate_canonical<double, std::numeric_limits<double>::digits>(random_);
 }
 
-void Simulation::initializeRegions() {
+void Simulation::initializeMap() {
   const int cellCount = configuration_.columns * configuration_.rows;
   cells_.assign(static_cast<std::size_t>(cellCount), Cell{});
 
@@ -133,68 +134,40 @@ void Simulation::initializeRegions() {
   std::iota(locations.begin(), locations.end(), 0);
   std::shuffle(locations.begin(), locations.end(), random_);
 
-  std::vector<int> frontier;
-  frontier.reserve(static_cast<std::size_t>(cellCount));
-  for (int region = 0; region < configuration_.regionCount; ++region) {
-    const int index = locations[static_cast<std::size_t>(region)];
-    cells_[static_cast<std::size_t>(index)].owner = region;
-    frontier.push_back(index);
+  for (int color = 0; color < configuration_.mapColorCount; ++color) {
+    const int index = locations[static_cast<std::size_t>(color)];
+    cells_[static_cast<std::size_t>(index)].owner = color;
   }
 
-  int assigned = configuration_.regionCount;
-  constexpr std::array<std::pair<int, int>, 4> directions = {std::pair{-1, 0}, std::pair{1, 0},
-                                                             std::pair{0, -1}, std::pair{0, 1}};
-
-  while (assigned < cellCount && !frontier.empty()) {
-    const std::size_t frontierOffset = static_cast<std::size_t>(randomUnit() * frontier.size());
-    const std::size_t safeOffset = std::min(frontierOffset, frontier.size() - 1);
-    const int sourceIndex = frontier[safeOffset];
-    const int sourceColumn = sourceIndex % configuration_.columns;
-    const int sourceRow = sourceIndex / configuration_.columns;
-
-    std::array<int, 4> order = {0, 1, 2, 3};
-    std::shuffle(order.begin(), order.end(), random_);
-    bool expanded = false;
-    for (const int directionIndex : order) {
-      const auto [deltaColumn, deltaRow] = directions[static_cast<std::size_t>(directionIndex)];
-      const int column = sourceColumn + deltaColumn;
-      const int row = sourceRow + deltaRow;
-      if (!isInside(column, row)) {
-        continue;
-      }
-      Cell &destination = cells_[static_cast<std::size_t>(indexFor(column, row))];
-      if (destination.owner != -1) {
-        continue;
-      }
-      destination.owner = cells_[static_cast<std::size_t>(sourceIndex)].owner;
-      frontier.push_back(indexFor(column, row));
-      ++assigned;
-      expanded = true;
-      break;
-    }
-
-    if (!expanded) {
-      frontier[safeOffset] = frontier.back();
-      frontier.pop_back();
-    }
+  for (int offset = configuration_.mapColorCount; offset < cellCount; ++offset) {
+    const int index = locations[static_cast<std::size_t>(offset)];
+    const int color = std::min(static_cast<int>(randomUnit() * configuration_.mapColorCount),
+                               configuration_.mapColorCount - 1);
+    cells_[static_cast<std::size_t>(index)].owner = color;
   }
 }
 
 void Simulation::initializeAgents() {
   agents_.clear();
-  agents_.reserve(static_cast<std::size_t>(configuration_.regionCount));
+  agents_.reserve(kBallCount);
 
-  std::vector<std::vector<int>> cellsByRegion(static_cast<std::size_t>(configuration_.regionCount));
+  std::vector<std::vector<int>> cellsByColor(
+      static_cast<std::size_t>(configuration_.mapColorCount));
   for (int index = 0; index < static_cast<int>(cells_.size()); ++index) {
     const int owner = cells_[static_cast<std::size_t>(index)].owner;
-    cellsByRegion[static_cast<std::size_t>(owner)].push_back(index);
+    cellsByColor[static_cast<std::size_t>(owner)].push_back(index);
   }
 
-  for (int region = 0; region < configuration_.regionCount; ++region) {
-    const std::vector<int> &regionCells = cellsByRegion[static_cast<std::size_t>(region)];
-    const std::size_t offset = std::min(static_cast<std::size_t>(randomUnit() * regionCells.size()),
-                                        regionCells.size() - 1);
-    const int cellIndex = regionCells[offset];
+  std::vector<int> activeColors(static_cast<std::size_t>(configuration_.mapColorCount));
+  std::iota(activeColors.begin(), activeColors.end(), 0);
+  std::shuffle(activeColors.begin(), activeColors.end(), random_);
+
+  for (int ball = 0; ball < kBallCount; ++ball) {
+    const int color = activeColors[static_cast<std::size_t>(ball)];
+    const std::vector<int> &colorCells = cellsByColor[static_cast<std::size_t>(color)];
+    const std::size_t offset =
+        std::min(static_cast<std::size_t>(randomUnit() * colorCells.size()), colorCells.size() - 1);
+    const int cellIndex = colorCells[offset];
     const int column = cellIndex % configuration_.columns;
     const int row = cellIndex / configuration_.columns;
     double angle = randomUnit() * 2.0 * kPi;
@@ -209,13 +182,13 @@ void Simulation::initializeAgents() {
                          configuration_.rows - kAgentRadius);
     agent.velocityX = std::cos(angle) * configuration_.speed;
     agent.velocityY = std::sin(angle) * configuration_.speed;
-    agent.owner = region;
+    agent.owner = color;
     agents_.push_back(agent);
   }
 }
 
 bool Simulation::applyImpact(int column, int row, int attacker) {
-  if (!isInside(column, row) || attacker < 0 || attacker >= configuration_.regionCount) {
+  if (!isInside(column, row) || attacker < 0 || attacker >= configuration_.mapColorCount) {
     return false;
   }
 

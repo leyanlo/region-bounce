@@ -26,9 +26,9 @@ struct Agent {
 };
 
 struct Configuration {
-  int columns = 64;
-  int rows = 40;
-  int regionCount = 14;
+  int columns = 20;
+  int rows = 14;
+  int mapColorCount = 12;
   double speed = 7.0;
   int palette = 0;
 };
@@ -48,7 +48,7 @@ public:
 
   [[nodiscard]] int columns() const { return configuration_.columns; }
   [[nodiscard]] int rows() const { return configuration_.rows; }
-  [[nodiscard]] int regionCount() const { return configuration_.regionCount; }
+  [[nodiscard]] int mapColorCount() const { return configuration_.mapColorCount; }
   [[nodiscard]] std::uint64_t seed() const { return seed_; }
   [[nodiscard]] const Cell &cell(int column, int row) const;
   [[nodiscard]] const std::vector<Cell> &cells() const { return cells_; }
@@ -60,7 +60,7 @@ private:
   [[nodiscard]] int indexFor(int column, int row) const;
   [[nodiscard]] bool isInside(int column, int row) const;
   [[nodiscard]] Cell *cellAtPoint(double x, double y);
-  void initializeRegions();
+  void initializeMap();
   void initializeAgents();
   void advanceSubstep(double elapsedSeconds);
   void collide(Agent &agent, Cell &cell);
