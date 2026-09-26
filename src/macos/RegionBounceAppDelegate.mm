@@ -63,6 +63,11 @@
                                               action:@selector(newWorld:)
                                        keyEquivalent:@"n"];
   newWorld.target = self;
+  NSMenuItem *darkAppearance = [worldMenu addItemWithTitle:@"Dark Appearance"
+                                                  action:@selector(toggleDarkAppearance:)
+                                           keyEquivalent:@"d"];
+  darkAppearance.target = self;
+  darkAppearance.state = NSControlStateValueOn;
   [worldMenu addItem:NSMenuItem.separatorItem];
   [worldMenu addItemWithTitle:@"Enter Full Screen"
                        action:@selector(toggleFullScreen:)
@@ -71,6 +76,11 @@
   [mainMenu addItem:worldItem];
 
   NSApp.mainMenu = mainMenu;
+}
+
+- (void)toggleDarkAppearance:(NSMenuItem *)sender {
+  self.canvas.darkAppearance = !self.canvas.darkAppearance;
+  sender.state = self.canvas.darkAppearance ? NSControlStateValueOn : NSControlStateValueOff;
 }
 
 - (void)newWorld:(id)sender {

@@ -9,6 +9,7 @@ NSString *const kGridColumnsKey = @"GridColumnsV2";
 NSString *const kSpeedKey = @"Speed";
 NSString *const kReseedMinutesKey = @"ReseedMinutes";
 NSString *const kShowAgentsKey = @"ShowAgents";
+NSString *const kDarkAppearanceKey = @"DarkAppearance";
 NSString *const kPaletteKey = @"Palette";
 
 NSDictionary<NSString *, id> *DefaultValues() {
@@ -19,6 +20,7 @@ NSDictionary<NSString *, id> *DefaultValues() {
     kReseedMinutesKey : @12,
     kShowAgentsKey : @YES,
     kPaletteKey : @0,
+    kDarkAppearanceKey : @YES,
   };
 }
 
@@ -58,6 +60,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
 @property(nonatomic, strong) NSTextField *speedField;
 @property(nonatomic, strong) NSTextField *reseedField;
 @property(nonatomic, strong) NSButton *agentsCheckbox;
+@property(nonatomic, strong) NSButton *darkCheckbox;
 @property(nonatomic, strong) NSPopUpButton *palettePopup;
 @end
 
@@ -90,6 +93,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
                                       reseedSeconds:[defaults doubleForKey:kReseedMinutesKey] * 60.0
                                          showAgents:[defaults boolForKey:kShowAgentsKey]
                                             palette:[defaults integerForKey:kPaletteKey]];
+  self.canvas.darkAppearance = [defaults boolForKey:kDarkAppearanceKey];
   [self addSubview:self.canvas];
 }
 
@@ -122,7 +126,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
     return;
   }
 
-  self.settingsPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 500, 430)
+  self.settingsPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 500, 470)
                                                   styleMask:NSWindowStyleMaskTitled
                                                     backing:NSBackingStoreBuffered
                                                       defer:NO];
@@ -133,6 +137,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
   self.speedField = DecimalField(7.0, 0.5, 30.0);
   self.reseedField = IntegerField(12, 1, 60);
   self.agentsCheckbox = [NSButton checkboxWithTitle:@"Show moving balls" target:nil action:nil];
+  self.darkCheckbox = [NSButton checkboxWithTitle:@"Dark appearance" target:nil action:nil];
   self.palettePopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
   [self.palettePopup addItemsWithTitles:@[ @"Earth", @"Sorbet", @"Ocean", @"Monochrome" ]];
 
@@ -167,7 +172,7 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
   buttons.alignment = NSLayoutAttributeCenterY;
 
   NSStackView *content =
-      [NSStackView stackViewWithViews:@[ title, subtitle, grid, self.agentsCheckbox, buttons ]];
+      [NSStackView stackViewWithViews:@[ title, subtitle, grid, self.agentsCheckbox, self.darkCheckbox, buttons ]];
   content.orientation = NSUserInterfaceLayoutOrientationVertical;
   content.alignment = NSLayoutAttributeLeading;
   content.spacing = 14.0;
@@ -195,6 +200,8 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
   self.reseedField.integerValue = [defaults integerForKey:kReseedMinutesKey];
   self.agentsCheckbox.state =
       [defaults boolForKey:kShowAgentsKey] ? NSControlStateValueOn : NSControlStateValueOff;
+  self.darkCheckbox.state =
+      [defaults boolForKey:kDarkAppearanceKey] ? NSControlStateValueOn : NSControlStateValueOff;
   [self.palettePopup selectItemAtIndex:[defaults integerForKey:kPaletteKey]];
 }
 
@@ -207,7 +214,9 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
   [defaults setInteger:self.reseedField.integerValue forKey:kReseedMinutesKey];
   [defaults setBool:self.agentsCheckbox.state == NSControlStateValueOn forKey:kShowAgentsKey];
   [defaults setInteger:self.palettePopup.indexOfSelectedItem forKey:kPaletteKey];
+  [defaults setBool:self.darkCheckbox.state == NSControlStateValueOn forKey:kDarkAppearanceKey];
   [defaults synchronize];
+  self.canvas.darkAppearance = self.darkCheckbox.state == NSControlStateValueOn;
 
   [self.canvas applyMapColors:self.mapColorsField.integerValue
                   gridColumns:self.columnsField.integerValue

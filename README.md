@@ -14,6 +14,8 @@ Every world begins as a noisy field of independently randomized colors. Over tim
 - Exactly three balls carrying three distinct starting colors
 - Immediate single-pixel conversion on every boundary collision
 - Equal-size square cells across the entire map, with edge pixels clipped rather than stretched
+- Dark appearance by default, with dim territories, black balls, and subtle black collision rings
+- Switch brightness in screen saver settings or **World → Dark Appearance** (`⌘D`) in the preview app
 - Four palettes: Earth, Sorbet, Ocean, and Monochrome
 - Screen saver settings for starting colors, grid size, speed, automatic reseeding, and ball visibility
 - Deterministic, platform-independent C++ simulation with takeover and lifecycle tests

@@ -4,6 +4,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface RegionBounceCanvasView : NSView
 
+@property(nonatomic) BOOL darkAppearance;
+
 - (instancetype)initWithFrame:(NSRect)frame
                     mapColors:(NSInteger)mapColors
                   gridColumns:(NSInteger)gridColumns

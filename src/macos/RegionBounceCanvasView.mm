@@ -24,6 +24,13 @@ using region_bounce::Simulation;
   NSInteger _currentRows;
 }
 
+@synthesize darkAppearance = _darkAppearance;
+
+- (void)setDarkAppearance:(BOOL)darkAppearance {
+  _darkAppearance = darkAppearance;
+  self.needsDisplay = YES;
+}
+
 - (instancetype)initWithFrame:(NSRect)frame {
   return [self initWithFrame:frame
                    mapColors:12
@@ -37,6 +44,7 @@ using region_bounce::Simulation;
 - (nullable instancetype)initWithCoder:(NSCoder *)coder {
   self = [super initWithCoder:coder];
   if (self) {
+    _darkAppearance = YES;
     [self applyMapColors:12
              gridColumns:20
                    speed:7.0
@@ -56,6 +64,7 @@ using region_bounce::Simulation;
                       palette:(NSInteger)palette {
   self = [super initWithFrame:frame];
   if (self) {
+    _darkAppearance = YES;
     self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [self applyMapColors:mapColors
              gridColumns:gridColumns
@@ -174,11 +183,15 @@ using region_bounce::Simulation;
   const CGFloat originY = (self.bounds.size.height - gridHeight) / 2.0;
   CGContextSetShouldAntialias(context, false);
 
+  // Dim the territory colors without changing ownership or the simulation.
+  const CGFloat territoryBrightness = _darkAppearance ? 0.28 : 1.0;
   for (int row = 0; row < _simulation->rows(); ++row) {
     for (int column = 0; column < _simulation->columns(); ++column) {
       const region_bounce::Cell &cell = _simulation->cell(column, row);
       const Color base = _simulation->colorForOwner(cell.owner);
-      CGContextSetRGBFillColor(context, base.red, base.green, base.blue, 1.0);
+      CGContextSetRGBFillColor(context, base.red * territoryBrightness,
+                                  base.green * territoryBrightness,
+                                  base.blue * territoryBrightness, 1.0);
       const CGRect cellRect =
           CGRectMake(column * cellSize, originY + row * cellSize, cellSize + 0.5, cellSize + 0.5);
       CGContextFillRect(context, cellRect);
@@ -191,18 +204,22 @@ using region_bounce::Simulation;
 
   CGContextSetShouldAntialias(context, true);
   const CGFloat radius = std::max<CGFloat>(2.0, cellSize * 0.28);
+  const CGFloat ballBrightness = _darkAppearance ? 0.0 : 1.0;
   for (const region_bounce::Agent &agent : _simulation->agents()) {
     const CGPoint center = CGPointMake(agent.x * cellSize, originY + agent.y * cellSize);
     if (agent.flash > 0.0) {
       const CGFloat ringRadius = radius * (1.7 + agent.flash * 1.8);
       CGContextSetLineWidth(context, std::max<CGFloat>(1.0, radius * 0.22));
-      CGContextSetRGBStrokeColor(context, 1.0, 1.0, 1.0, agent.flash * 0.42);
+      CGContextSetRGBStrokeColor(context, ballBrightness, ballBrightness, ballBrightness,
+                                 agent.flash * 0.42);
       CGContextStrokeEllipseInRect(context, CGRectMake(center.x - ringRadius, center.y - ringRadius,
                                                        ringRadius * 2.0, ringRadius * 2.0));
     }
-    CGContextSetShadowWithColor(context, CGSizeZero, radius * 1.4,
-                                [NSColor colorWithWhite:1.0 alpha:0.45].CGColor);
-    CGContextSetRGBFillColor(context, 1.0, 1.0, 0.98, 1.0);
+    if (!_darkAppearance) {
+      CGContextSetShadowWithColor(context, CGSizeZero, radius * 1.4,
+                                  [NSColor colorWithWhite:1.0 alpha:0.45].CGColor);
+    }
+    CGContextSetRGBFillColor(context, ballBrightness, ballBrightness, ballBrightness * 0.98, 1.0);
     CGContextFillEllipseInRect(
         context, CGRectMake(center.x - radius, center.y - radius, radius * 2.0, radius * 2.0));
     CGContextSetShadowWithColor(context, CGSizeZero, 0.0, nullptr);
