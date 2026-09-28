@@ -184,7 +184,7 @@ using region_bounce::Simulation;
   CGContextSetShouldAntialias(context, false);
 
   // Dim the territory colors without changing ownership or the simulation.
-  const CGFloat territoryBrightness = _darkAppearance ? 0.28 : 1.0;
+  const CGFloat territoryBrightness = _darkAppearance ? 0.40 : 1.0;
   for (int row = 0; row < _simulation->rows(); ++row) {
     for (int column = 0; column < _simulation->columns(); ++column) {
       const region_bounce::Cell &cell = _simulation->cell(column, row);
