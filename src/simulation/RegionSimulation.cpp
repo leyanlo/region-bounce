@@ -203,7 +203,6 @@ bool Simulation::applyImpact(int column, int row, int attacker) {
 
 void Simulation::collide(Agent &agent, Cell &cell) {
   ++statistics_.collisions;
-  agent.flash = 1.0;
   const int index = static_cast<int>(&cell - cells_.data());
   const int column = index % configuration_.columns;
   const int row = index / configuration_.columns;
@@ -221,14 +220,11 @@ void Simulation::advance(double elapsedSeconds) {
 
 void Simulation::advanceSubstep(double elapsedSeconds) {
   for (Agent &agent : agents_) {
-    agent.flash = std::max(0.0, agent.flash - elapsedSeconds * 3.5);
-
     double nextX = agent.x + agent.velocityX * elapsedSeconds;
     if (nextX - kAgentRadius < 0.0 || nextX + kAgentRadius >= configuration_.columns) {
       agent.velocityX = -agent.velocityX;
       nextX = std::clamp(nextX, kAgentRadius, configuration_.columns - kAgentRadius - 0.001);
       ++statistics_.collisions;
-      agent.flash = 1.0;
     } else {
       const double probeX = nextX + std::copysign(kAgentRadius, agent.velocityX);
       Cell *target = cellAtPoint(probeX, agent.y);
@@ -245,7 +241,6 @@ void Simulation::advanceSubstep(double elapsedSeconds) {
       agent.velocityY = -agent.velocityY;
       nextY = std::clamp(nextY, kAgentRadius, configuration_.rows - kAgentRadius - 0.001);
       ++statistics_.collisions;
-      agent.flash = 1.0;
     } else {
       const double probeY = nextY + std::copysign(kAgentRadius, agent.velocityY);
       Cell *target = cellAtPoint(agent.x, probeY);

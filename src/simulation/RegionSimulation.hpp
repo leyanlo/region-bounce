@@ -22,7 +22,6 @@ struct Agent {
   double velocityX = 0.0;
   double velocityY = 0.0;
   int owner = 0;
-  double flash = 0.0;
 };
 
 struct Configuration {

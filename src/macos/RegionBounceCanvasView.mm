@@ -207,14 +207,6 @@ using region_bounce::Simulation;
   const CGFloat ballBrightness = _darkAppearance ? 0.0 : 1.0;
   for (const region_bounce::Agent &agent : _simulation->agents()) {
     const CGPoint center = CGPointMake(agent.x * cellSize, originY + agent.y * cellSize);
-    if (agent.flash > 0.0) {
-      const CGFloat ringRadius = radius * (1.7 + agent.flash * 1.8);
-      CGContextSetLineWidth(context, std::max<CGFloat>(1.0, radius * 0.22));
-      CGContextSetRGBStrokeColor(context, ballBrightness, ballBrightness, ballBrightness,
-                                 agent.flash * 0.42);
-      CGContextStrokeEllipseInRect(context, CGRectMake(center.x - ringRadius, center.y - ringRadius,
-                                                       ringRadius * 2.0, ringRadius * 2.0));
-    }
     if (!_darkAppearance) {
       CGContextSetShadowWithColor(context, CGSizeZero, radius * 1.4,
                                   [NSColor colorWithWhite:1.0 alpha:0.45].CGColor);
