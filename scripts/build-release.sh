@@ -6,11 +6,12 @@ project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 build_dir="${project_dir}/build-release"
 dist_dir="${project_dir}/dist"
 
-cmake -S "${project_dir}" -B "${build_dir}" -DCMAKE_BUILD_TYPE=Release
+cmake -S "${project_dir}" -B "${build_dir}" -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_OSX_SYSROOT="$(xcrun --sdk macosx --show-sdk-path)"
 cmake --build "${build_dir}" --parallel
 ctest --test-dir "${build_dir}" --output-on-failure
 
-for bundle in "${build_dir}/RegionBounce.saver" "${build_dir}/RegionBounce.app"; do
+for bundle in "${build_dir}/RegionBounce.saver" "${build_dir}/RegionBounce Preview.app"; do
   codesign --force --deep --sign - "${bundle}"
   codesign --verify --deep --strict --verbose=2 "${bundle}"
 done
@@ -21,7 +22,8 @@ trap 'rm -rf "${staging_dir}"' EXIT
 package_dir="${staging_dir}/RegionBounce-macOS"
 mkdir -p "${package_dir}"
 ditto "${build_dir}/RegionBounce.saver" "${package_dir}/RegionBounce.saver"
-ditto "${build_dir}/RegionBounce.app" "${package_dir}/RegionBounce.app"
+ditto "${build_dir}/RegionBounce Preview.app" "${package_dir}/RegionBounce Preview.app"
+cp "${project_dir}/docs/INSTALL.txt" "${package_dir}/INSTALL.txt"
 archive="${dist_dir}/RegionBounce-macOS.zip"
 rm -f "${archive}"
 ditto -c -k --sequesterRsrc --keepParent "${package_dir}" "${archive}"

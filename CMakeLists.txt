@@ -27,12 +27,20 @@ add_library(region_bounce_simulation STATIC
 target_include_directories(region_bounce_simulation PUBLIC src/simulation)
 target_compile_options(region_bounce_simulation PRIVATE -Wall -Wextra -Wpedantic)
 
+add_library(region_bounce_settings STATIC
+  src/macos/RegionBounceSettings.mm
+  src/macos/RegionBounceSettingsController.mm
+)
+target_include_directories(region_bounce_settings PUBLIC src/macos)
+target_compile_options(region_bounce_settings PRIVATE -fobjc-arc -Wall -Wextra)
+target_link_libraries(region_bounce_settings PUBLIC region_bounce_simulation ${COCOA_FRAMEWORK} ${SCREENSAVER_FRAMEWORK})
+
 add_library(region_bounce_canvas STATIC
   src/macos/RegionBounceCanvasView.mm
 )
 target_include_directories(region_bounce_canvas PUBLIC src/macos)
 target_compile_options(region_bounce_canvas PRIVATE -fobjc-arc -Wall -Wextra)
-target_link_libraries(region_bounce_canvas PUBLIC region_bounce_simulation ${COCOA_FRAMEWORK})
+target_link_libraries(region_bounce_canvas PUBLIC region_bounce_settings ${COCOA_FRAMEWORK})
 
 add_library(RegionBounceSaver MODULE
   src/macos/RegionBounceSaverView.mm
@@ -54,8 +62,8 @@ add_executable(RegionBounceApp MACOSX_BUNDLE
 target_compile_options(RegionBounceApp PRIVATE -fobjc-arc -Wall -Wextra)
 target_link_libraries(RegionBounceApp PRIVATE region_bounce_canvas ${COCOA_FRAMEWORK})
 set_target_properties(RegionBounceApp PROPERTIES
-  OUTPUT_NAME "RegionBounce"
-  MACOSX_BUNDLE_BUNDLE_NAME "RegionBounce"
+  OUTPUT_NAME "RegionBounce Preview"
+  MACOSX_BUNDLE_BUNDLE_NAME "RegionBounce Preview"
   MACOSX_BUNDLE_GUI_IDENTIFIER "com.leyanlo.RegionBounce"
   MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
   MACOSX_BUNDLE_BUNDLE_VERSION "1"

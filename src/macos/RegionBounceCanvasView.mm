@@ -12,66 +12,30 @@ using region_bounce::Simulation;
 
 @implementation RegionBounceCanvasView {
   std::unique_ptr<Simulation> _simulation;
-  NSInteger _mapColors;
-  NSInteger _gridColumns;
-  double _speed;
-  NSTimeInterval _reseedSeconds;
-  BOOL _showAgents;
-  NSInteger _palette;
+  RegionBounceSettings *_settings;
   BOOL _active;
   NSTimeInterval _lastTick;
   NSTimeInterval _worldAge;
   NSInteger _currentRows;
 }
 
-@synthesize darkAppearance = _darkAppearance;
-
-- (void)setDarkAppearance:(BOOL)darkAppearance {
-  _darkAppearance = darkAppearance;
-  self.needsDisplay = YES;
-}
-
 - (instancetype)initWithFrame:(NSRect)frame {
-  return [self initWithFrame:frame
-                   mapColors:12
-                 gridColumns:20
-                       speed:7.0
-               reseedSeconds:12.0 * 60.0
-                  showAgents:YES
-                     palette:0];
+  return [self initWithFrame:frame settings:[[RegionBounceSettings alloc] init]];
 }
 
 - (nullable instancetype)initWithCoder:(NSCoder *)coder {
   self = [super initWithCoder:coder];
   if (self) {
-    _darkAppearance = YES;
-    [self applyMapColors:12
-             gridColumns:20
-                   speed:7.0
-           reseedSeconds:12.0 * 60.0
-              showAgents:YES
-                 palette:0];
+    [self applySettings:[[RegionBounceSettings alloc] init]];
   }
   return self;
 }
 
-- (instancetype)initWithFrame:(NSRect)frame
-                    mapColors:(NSInteger)mapColors
-                  gridColumns:(NSInteger)gridColumns
-                        speed:(double)speed
-                reseedSeconds:(NSTimeInterval)reseedSeconds
-                   showAgents:(BOOL)showAgents
-                      palette:(NSInteger)palette {
+- (instancetype)initWithFrame:(NSRect)frame settings:(RegionBounceSettings *)settings {
   self = [super initWithFrame:frame];
   if (self) {
-    _darkAppearance = YES;
     self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    [self applyMapColors:mapColors
-             gridColumns:gridColumns
-                   speed:speed
-           reseedSeconds:reseedSeconds
-              showAgents:showAgents
-                 palette:palette];
+    [self applySettings:settings];
   }
   return self;
 }
@@ -84,34 +48,32 @@ using region_bounce::Simulation;
   return YES;
 }
 
-- (void)applyMapColors:(NSInteger)mapColors
-           gridColumns:(NSInteger)gridColumns
-                 speed:(double)speed
-         reseedSeconds:(NSTimeInterval)reseedSeconds
-            showAgents:(BOOL)showAgents
-               palette:(NSInteger)palette {
-  _mapColors = std::clamp<NSInteger>(mapColors, 3, 30);
-  _gridColumns = std::clamp<NSInteger>(gridColumns, 8, 96);
-  _speed = std::clamp(speed, 0.5, 30.0);
-  _reseedSeconds = std::clamp<NSTimeInterval>(reseedSeconds, 60.0, 60.0 * 60.0);
-  _showAgents = showAgents;
-  _palette = std::clamp<NSInteger>(palette, 0, 3);
-  [self rebuildForCurrentBounds];
+- (void)applySettings:(RegionBounceSettings *)settings {
+  RegionBounceSettings *next = [settings copy];
+  [next normalize];
+  const BOOL rebuild = !_settings || _settings.mapColors != next.mapColors ||
+                       _settings.gridColumns != next.gridColumns ||
+                       _settings.speed != next.speed || _settings.palette != next.palette;
+  _settings = next;
+  if (rebuild) {
+    [self rebuildForCurrentBounds];
+  }
+  self.needsDisplay = YES;
 }
 
 - (void)rebuildForCurrentBounds {
   const NSSize size = self.bounds.size;
   const double width = std::max(1.0, static_cast<double>(size.width));
   const double height = std::max(1.0, static_cast<double>(size.height));
-  const double cellSize = width / _gridColumns;
+  const double cellSize = width / _settings.gridColumns;
   _currentRows = std::max<NSInteger>(2, std::ceil(height / cellSize));
 
   Configuration configuration;
-  configuration.columns = static_cast<int>(_gridColumns);
+  configuration.columns = static_cast<int>(_settings.gridColumns);
   configuration.rows = static_cast<int>(_currentRows);
-  configuration.mapColorCount = static_cast<int>(_mapColors);
-  configuration.speed = _speed;
-  configuration.palette = static_cast<int>(_palette);
+  configuration.mapColorCount = static_cast<int>(_settings.mapColors);
+  configuration.speed = _settings.speed;
+  configuration.palette = static_cast<int>(_settings.palette);
   _simulation = std::make_unique<Simulation>(configuration);
   _worldAge = 0.0;
   self.needsDisplay = YES;
@@ -122,7 +84,7 @@ using region_bounce::Simulation;
   if (size.width <= 0.0 || size.height <= 0.0) {
     return;
   }
-  const CGFloat cellSize = size.width / _gridColumns;
+  const CGFloat cellSize = size.width / _settings.gridColumns;
   const NSInteger desiredRows = std::max<NSInteger>(2, std::ceil(size.height / cellSize));
   if (!_simulation || desiredRows != _currentRows) {
     [self rebuildForCurrentBounds];
@@ -151,7 +113,7 @@ using region_bounce::Simulation;
   const NSTimeInterval elapsed = std::clamp(now - _lastTick, 0.0, 0.1);
   _lastTick = now;
   _worldAge += elapsed;
-  if (_worldAge >= _reseedSeconds) {
+  if (_worldAge >= _settings.reseedSeconds) {
     [self reseed];
   } else if (_simulation) {
     _simulation->advance(elapsed);
@@ -184,7 +146,7 @@ using region_bounce::Simulation;
   CGContextSetShouldAntialias(context, false);
 
   // Dim the territory colors without changing ownership or the simulation.
-  const CGFloat territoryBrightness = _darkAppearance ? 0.40 : 1.0;
+  const CGFloat territoryBrightness = _settings.darkAppearance ? 0.40 : 1.0;
   for (int row = 0; row < _simulation->rows(); ++row) {
     for (int column = 0; column < _simulation->columns(); ++column) {
       const region_bounce::Cell &cell = _simulation->cell(column, row);
@@ -198,16 +160,16 @@ using region_bounce::Simulation;
     }
   }
 
-  if (!_showAgents) {
+  if (!_settings.showAgents) {
     return;
   }
 
   CGContextSetShouldAntialias(context, true);
   const CGFloat radius = std::max<CGFloat>(2.0, cellSize * 0.28);
-  const CGFloat ballBrightness = _darkAppearance ? 0.0 : 1.0;
+  const CGFloat ballBrightness = _settings.darkAppearance ? 0.0 : 1.0;
   for (const region_bounce::Agent &agent : _simulation->agents()) {
     const CGPoint center = CGPointMake(agent.x * cellSize, originY + agent.y * cellSize);
-    if (!_darkAppearance) {
+    if (!_settings.darkAppearance) {
       CGContextSetShadowWithColor(context, CGSizeZero, radius * 1.4,
                                   [NSColor colorWithWhite:1.0 alpha:0.45].CGColor);
     }

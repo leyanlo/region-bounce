@@ -9,7 +9,7 @@ Every world begins as a noisy field of independently randomized colors. Over tim
 ## Features
 
 - Native universal `arm64` and `x86_64` `.saver` bundle
-- Standalone preview app with **World → New World** (`⌘N`) and full-screen mode
+- Optional **RegionBounce Preview** app with shared screen saver settings, **World → New World** (`⌘N`) and full-screen mode
 - Independently randomized starting pixels, matching the visual behavior of Bounceorama
 - Exactly three balls carrying three distinct starting colors
 - Immediate single-pixel conversion on every boundary collision
@@ -34,10 +34,39 @@ This builds and tests both bundles, ad-hoc signs them for local use, verifies th
 To run the preview app:
 
 ```sh
-open build-release/RegionBounce.app
+open "build-release/RegionBounce Preview.app"
 ```
 
 To install the screen saver, open `build-release/RegionBounce.saver` in Finder or double-click it and let macOS add it to **System Settings → Screen Saver**. Local ad-hoc signing is intended for development; downloadable releases should be Developer ID signed and notarized.
+
+## Preview and settings
+
+The screen saver is the primary product. **RegionBounce Preview** is an optional
+standalone companion for trying the animation without starting the screen saver.
+Open **RegionBounce Preview → Settings…** (`⌘,`) to use the same settings panel
+as the screen saver. Saving in either place updates the same preferences;
+Cancel discards edits. **World → Dark Appearance** (`⌘D`) also saves the shared
+appearance setting.
+
+The preview reloads preferences when it becomes active. The screen saver reloads
+when its animation starts; restart an already-running screen saver to pick up
+changes from the preview. Existing installed screen saver settings are preserved.
+
+The release archive includes the screen saver, optional preview app, and
+[installation instructions](docs/INSTALL.txt).
+
+## Repository structure
+
+This repository contains one native macOS project with two bundle targets. It
+does not contain a web app; the web experiment linked below is the inspiration.
+
+- `src/simulation/`: platform-independent C++ world and collision logic.
+- `src/macos/RegionBounceCanvasView.*`: shared native renderer and animation state.
+- `src/macos/RegionBounceSettings.*`: shared defaults and saved preferences.
+- `src/macos/RegionBounceSettingsController.*`: settings panel used by both bundles.
+- `src/macos/RegionBounceSaverView.mm`: macOS screen saver lifecycle adapter.
+- `src/macos/RegionBounceAppDelegate.*` and `main.mm`: optional preview app.
+- `macos/`: bundle metadata; `scripts/`: release packaging; `tests/`: automated checks.
 
 ## How it works
 

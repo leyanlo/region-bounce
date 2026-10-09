@@ -21,8 +21,8 @@ jobs:
       - name: Verify universal bundles
         run: |
           codesign --force --deep --sign - build/RegionBounce.saver
-          codesign --force --deep --sign - build/RegionBounce.app
+          codesign --force --deep --sign - "build/RegionBounce Preview.app"
           codesign --verify --deep --strict --verbose=2 build/RegionBounce.saver
-          codesign --verify --deep --strict --verbose=2 build/RegionBounce.app
+          codesign --verify --deep --strict --verbose=2 "build/RegionBounce Preview.app"
           lipo build/RegionBounce.saver/Contents/MacOS/RegionBounce -verify_arch arm64 x86_64
-          lipo build/RegionBounce.app/Contents/MacOS/RegionBounce -verify_arch arm64 x86_64
+          lipo "build/RegionBounce Preview.app/Contents/MacOS/RegionBounce Preview" -verify_arch arm64 x86_64

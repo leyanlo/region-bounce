@@ -1,67 +1,11 @@
 #import <ScreenSaver/ScreenSaver.h>
 
 #import "RegionBounceCanvasView.h"
-
-namespace {
-
-NSString *const kMapColorCountKey = @"MapColorCount";
-NSString *const kGridColumnsKey = @"GridColumnsV2";
-NSString *const kSpeedKey = @"Speed";
-NSString *const kReseedMinutesKey = @"ReseedMinutes";
-NSString *const kShowAgentsKey = @"ShowAgents";
-NSString *const kDarkAppearanceKey = @"DarkAppearance";
-NSString *const kPaletteKey = @"Palette";
-
-NSDictionary<NSString *, id> *DefaultValues() {
-  return @{
-    kMapColorCountKey : @12,
-    kGridColumnsKey : @20,
-    kSpeedKey : @7.0,
-    kReseedMinutesKey : @12,
-    kShowAgentsKey : @YES,
-    kPaletteKey : @0,
-    kDarkAppearanceKey : @YES,
-  };
-}
-
-NSTextField *Label(NSString *text) {
-  NSTextField *label = [NSTextField labelWithString:text];
-  label.alignment = NSTextAlignmentRight;
-  return label;
-}
-
-NSTextField *IntegerField(NSInteger value, NSInteger minimum, NSInteger maximum) {
-  NSTextField *field = [NSTextField textFieldWithString:[NSString stringWithFormat:@"%ld", value]];
-  NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
-  formatter.allowsFloats = NO;
-  formatter.minimum = @(minimum);
-  formatter.maximum = @(maximum);
-  field.formatter = formatter;
-  return field;
-}
-
-NSTextField *DecimalField(double value, double minimum, double maximum) {
-  NSTextField *field = [NSTextField textFieldWithString:[NSString stringWithFormat:@"%.1f", value]];
-  NSNumberFormatter *formatter = [[NSNumberFormatter alloc] init];
-  formatter.allowsFloats = YES;
-  formatter.minimum = @(minimum);
-  formatter.maximum = @(maximum);
-  field.formatter = formatter;
-  return field;
-}
-
-} // namespace
+#import "RegionBounceSettingsController.h"
 
 @interface RegionBounceSaverView : ScreenSaverView
 @property(nonatomic, strong) RegionBounceCanvasView *canvas;
-@property(nonatomic, strong) NSPanel *settingsPanel;
-@property(nonatomic, strong) NSTextField *mapColorsField;
-@property(nonatomic, strong) NSTextField *columnsField;
-@property(nonatomic, strong) NSTextField *speedField;
-@property(nonatomic, strong) NSTextField *reseedField;
-@property(nonatomic, strong) NSButton *agentsCheckbox;
-@property(nonatomic, strong) NSButton *darkCheckbox;
-@property(nonatomic, strong) NSPopUpButton *palettePopup;
+@property(nonatomic, strong) RegionBounceSettingsController *settingsController;
 @end
 
 @implementation RegionBounceSaverView
@@ -71,34 +15,16 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
   if (self) {
     self.animationTimeInterval = 1.0 / 60.0;
     self.autoresizesSubviews = YES;
-    [self installCanvas];
+    self.canvas = [[RegionBounceCanvasView alloc] initWithFrame:self.bounds
+                                                     settings:[RegionBounceSettings loadSettings]];
+    [self addSubview:self.canvas];
   }
   return self;
 }
 
-- (ScreenSaverDefaults *)preferences {
-  NSString *identifier = [NSBundle bundleForClass:self.class].bundleIdentifier;
-  ScreenSaverDefaults *defaults = [ScreenSaverDefaults defaultsForModuleWithName:identifier];
-  [defaults registerDefaults:DefaultValues()];
-  return defaults;
-}
-
-- (void)installCanvas {
-  ScreenSaverDefaults *defaults = [self preferences];
-  self.canvas =
-      [[RegionBounceCanvasView alloc] initWithFrame:self.bounds
-                                          mapColors:[defaults integerForKey:kMapColorCountKey]
-                                        gridColumns:[defaults integerForKey:kGridColumnsKey]
-                                              speed:[defaults doubleForKey:kSpeedKey]
-                                      reseedSeconds:[defaults doubleForKey:kReseedMinutesKey] * 60.0
-                                         showAgents:[defaults boolForKey:kShowAgentsKey]
-                                            palette:[defaults integerForKey:kPaletteKey]];
-  self.canvas.darkAppearance = [defaults boolForKey:kDarkAppearanceKey];
-  [self addSubview:self.canvas];
-}
-
 - (void)startAnimation {
   [super startAnimation];
+  [self.canvas applySettings:[RegionBounceSettings loadSettings]];
   [self.canvas startAnimating];
 }
 
@@ -116,120 +42,13 @@ NSTextField *DecimalField(double value, double minimum, double maximum) {
 }
 
 - (NSWindow *)configureSheet {
-  [self buildSettingsPanelIfNeeded];
-  [self populateSettingsFields];
-  return self.settingsPanel;
-}
-
-- (void)buildSettingsPanelIfNeeded {
-  if (self.settingsPanel) {
-    return;
+  if (!self.settingsController) {
+    self.settingsController = [[RegionBounceSettingsController alloc] init];
   }
-
-  self.settingsPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 500, 470)
-                                                  styleMask:NSWindowStyleMaskTitled
-                                                    backing:NSBackingStoreBuffered
-                                                      defer:NO];
-  self.settingsPanel.title = @"RegionBounce Settings";
-
-  self.mapColorsField = IntegerField(12, 3, 30);
-  self.columnsField = IntegerField(20, 8, 96);
-  self.speedField = DecimalField(7.0, 0.5, 30.0);
-  self.reseedField = IntegerField(12, 1, 60);
-  self.agentsCheckbox = [NSButton checkboxWithTitle:@"Show moving balls" target:nil action:nil];
-  self.darkCheckbox = [NSButton checkboxWithTitle:@"Dark appearance" target:nil action:nil];
-  self.palettePopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
-  [self.palettePopup addItemsWithTitles:@[ @"Earth", @"Sorbet", @"Ocean", @"Monochrome" ]];
-
-  NSGridView *grid = [NSGridView gridViewWithViews:@[
-    @[ Label(@"Random starting colors"), self.mapColorsField ],
-    @[ Label(@"Grid columns"), self.columnsField ],
-    @[ Label(@"Ball speed"), self.speedField ],
-    @[ Label(@"New world after (minutes)"), self.reseedField ],
-    @[ Label(@"Palette"), self.palettePopup ],
-  ]];
-  grid.rowSpacing = 10.0;
-  grid.columnSpacing = 18.0;
-  [grid columnAtIndex:0].width = 205.0;
-  [grid columnAtIndex:1].width = 190.0;
-
-  NSTextField *title = [NSTextField labelWithString:@"RegionBounce"];
-  title.font = [NSFont systemFontOfSize:22.0 weight:NSFontWeightSemibold];
-  NSTextField *subtitle = [NSTextField
-      labelWithString:
-          @"Three balls carry distinct colors and gradually replace the randomized map."];
-  subtitle.textColor = NSColor.secondaryLabelColor;
-
-  NSButton *cancel = [NSButton buttonWithTitle:@"Cancel"
-                                        target:self
-                                        action:@selector(cancelSettings:)];
-  cancel.keyEquivalent = @"\e";
-  NSButton *save = [NSButton buttonWithTitle:@"Save" target:self action:@selector(saveSettings:)];
-  save.keyEquivalent = @"\r";
-  NSStackView *buttons = [NSStackView stackViewWithViews:@[ cancel, save ]];
-  buttons.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-  buttons.spacing = 10.0;
-  buttons.alignment = NSLayoutAttributeCenterY;
-
-  NSStackView *content =
-      [NSStackView stackViewWithViews:@[ title, subtitle, grid, self.agentsCheckbox, self.darkCheckbox, buttons ]];
-  content.orientation = NSUserInterfaceLayoutOrientationVertical;
-  content.alignment = NSLayoutAttributeLeading;
-  content.spacing = 14.0;
-  content.translatesAutoresizingMaskIntoConstraints = NO;
-  [self.settingsPanel.contentView addSubview:content];
-
-  [NSLayoutConstraint activateConstraints:@[
-    [content.leadingAnchor constraintEqualToAnchor:self.settingsPanel.contentView.leadingAnchor
-                                          constant:28.0],
-    [content.trailingAnchor constraintEqualToAnchor:self.settingsPanel.contentView.trailingAnchor
-                                           constant:-28.0],
-    [content.topAnchor constraintEqualToAnchor:self.settingsPanel.contentView.topAnchor
-                                      constant:24.0],
-    [content.bottomAnchor
-        constraintLessThanOrEqualToAnchor:self.settingsPanel.contentView.bottomAnchor
-                                 constant:-24.0],
-  ]];
-}
-
-- (void)populateSettingsFields {
-  ScreenSaverDefaults *defaults = [self preferences];
-  self.mapColorsField.integerValue = [defaults integerForKey:kMapColorCountKey];
-  self.columnsField.integerValue = [defaults integerForKey:kGridColumnsKey];
-  self.speedField.doubleValue = [defaults doubleForKey:kSpeedKey];
-  self.reseedField.integerValue = [defaults integerForKey:kReseedMinutesKey];
-  self.agentsCheckbox.state =
-      [defaults boolForKey:kShowAgentsKey] ? NSControlStateValueOn : NSControlStateValueOff;
-  self.darkCheckbox.state =
-      [defaults boolForKey:kDarkAppearanceKey] ? NSControlStateValueOn : NSControlStateValueOff;
-  [self.palettePopup selectItemAtIndex:[defaults integerForKey:kPaletteKey]];
-}
-
-- (void)saveSettings:(id)sender {
-  (void)sender;
-  ScreenSaverDefaults *defaults = [self preferences];
-  [defaults setInteger:self.mapColorsField.integerValue forKey:kMapColorCountKey];
-  [defaults setInteger:self.columnsField.integerValue forKey:kGridColumnsKey];
-  [defaults setDouble:self.speedField.doubleValue forKey:kSpeedKey];
-  [defaults setInteger:self.reseedField.integerValue forKey:kReseedMinutesKey];
-  [defaults setBool:self.agentsCheckbox.state == NSControlStateValueOn forKey:kShowAgentsKey];
-  [defaults setInteger:self.palettePopup.indexOfSelectedItem forKey:kPaletteKey];
-  [defaults setBool:self.darkCheckbox.state == NSControlStateValueOn forKey:kDarkAppearanceKey];
-  [defaults synchronize];
-  self.canvas.darkAppearance = self.darkCheckbox.state == NSControlStateValueOn;
-
-  [self.canvas applyMapColors:self.mapColorsField.integerValue
-                  gridColumns:self.columnsField.integerValue
-                        speed:self.speedField.doubleValue
-                reseedSeconds:self.reseedField.doubleValue * 60.0
-                   showAgents:self.agentsCheckbox.state == NSControlStateValueOn
-                      palette:self.palettePopup.indexOfSelectedItem];
-  [NSApp endSheet:self.settingsPanel returnCode:NSModalResponseOK];
-}
-
-- (void)cancelSettings:(id)sender {
-  (void)sender;
-  [NSApp endSheet:self.settingsPanel returnCode:NSModalResponseCancel];
+  __weak RegionBounceSaverView *weakSelf = self;
+  return [self.settingsController configureSheetWithCompletion:^(RegionBounceSettings *settings) {
+    [weakSelf.canvas applySettings:settings];
+  }];
 }
 
 @end

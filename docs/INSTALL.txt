@@ -1,0 +1,36 @@
+RegionBounce for macOS
+======================
+Requires macOS 12 or newer.
+
+Install the screen saver
+------------------------
+1. Double-click RegionBounce.saver and follow the macOS installation prompts.
+2. Select RegionBounce in System Settings > Screen Saver (System Preferences
+   on older macOS versions).
+3. Open the screen saver options to adjust colors, grid size, speed, automatic
+   reseeding, ball visibility, and dark appearance.
+
+Optional preview app
+--------------------
+RegionBounce Preview.app lets you try the animation in a normal window or
+full screen. It is not required to run the screen saver. You can run it from
+this folder or copy it to Applications. It does not install the screen saver.
+
+Choose RegionBounce Preview > Settings… (Command-comma) for the same settings
+panel as the screen saver. Save updates the preferences used by both bundles;
+Cancel discards edits. World > Dark Appearance (Command-D) saves that setting
+for both. World > New World (Command-N) restarts only the current preview.
+
+The preview reloads preferences when brought to the foreground. Restart an
+already-running screen saver to pick up settings saved from the preview.
+
+Replacing an older version
+--------------------------
+Quit the old preview app before replacing it. If you previously copied
+RegionBounce.app to Applications, replace that preview with RegionBounce
+Preview.app. The screen saver keeps its existing preference domain and keys.
+
+Local builds
+------------
+The build script applies ad-hoc signatures for local development. These builds
+are not Developer ID signed or notarized for public distribution.

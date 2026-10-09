@@ -1,19 +1,10 @@
 #import <Cocoa/Cocoa.h>
+#import "RegionBounceSettings.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface RegionBounceCanvasView : NSView
-
-@property(nonatomic) BOOL darkAppearance;
-
-- (instancetype)initWithFrame:(NSRect)frame
-                    mapColors:(NSInteger)mapColors
-                  gridColumns:(NSInteger)gridColumns
-                        speed:(double)speed
-                reseedSeconds:(NSTimeInterval)reseedSeconds
-                   showAgents:(BOOL)showAgents
-                      palette:(NSInteger)palette;
-
+- (instancetype)initWithFrame:(NSRect)frame settings:(RegionBounceSettings *)settings;
 - (instancetype)initWithFrame:(NSRect)frame;
 - (nullable instancetype)initWithCoder:(NSCoder *)coder;
 
@@ -21,13 +12,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)stopAnimating;
 - (void)tick;
 - (void)reseed;
-- (void)applyMapColors:(NSInteger)mapColors
-           gridColumns:(NSInteger)gridColumns
-                 speed:(double)speed
-         reseedSeconds:(NSTimeInterval)reseedSeconds
-            showAgents:(BOOL)showAgents
-               palette:(NSInteger)palette;
-
+- (void)applySettings:(RegionBounceSettings *)settings;
 @end
 
 NS_ASSUME_NONNULL_END
