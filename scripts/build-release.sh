@@ -19,13 +19,19 @@ done
 mkdir -p "${dist_dir}"
 staging_dir="$(mktemp -d)"
 trap 'rm -rf "${staging_dir}"' EXIT
-package_dir="${staging_dir}/RegionBounce-macOS"
-mkdir -p "${package_dir}"
-ditto "${build_dir}/RegionBounce.saver" "${package_dir}/RegionBounce.saver"
-ditto "${build_dir}/RegionBounce Preview.app" "${package_dir}/RegionBounce Preview.app"
-cp "${project_dir}/docs/INSTALL.txt" "${package_dir}/INSTALL.txt"
-archive="${dist_dir}/RegionBounce-macOS.zip"
-rm -f "${archive}"
-ditto -c -k --sequesterRsrc --keepParent "${package_dir}" "${archive}"
-
-echo "Built ${archive}"
+for package in RegionBounce-macOS RegionBounce-ScreenSaver RegionBounce-Preview; do
+  package_dir="${staging_dir}/${package}"
+  mkdir -p "${package_dir}"
+  if [[ "${package}" != RegionBounce-Preview ]]; then
+    ditto "${build_dir}/RegionBounce.saver" "${package_dir}/RegionBounce.saver"
+  fi
+  if [[ "${package}" != RegionBounce-ScreenSaver ]]; then
+    ditto "${build_dir}/RegionBounce Preview.app" "${package_dir}/RegionBounce Preview.app"
+  fi
+  cp "${project_dir}/docs/INSTALL.txt" "${package_dir}/INSTALL.txt"
+  cp "${project_dir}/LICENSE" "${package_dir}/LICENSE"
+  archive="${dist_dir}/${package}.zip"
+  rm -f "${archive}"
+  ditto -c -k --sequesterRsrc --keepParent "${package_dir}" "${archive}"
+  echo "Built ${archive}"
+done

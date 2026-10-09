@@ -29,7 +29,7 @@ RegionBounce requires macOS 12 or newer, Xcode command-line tools, and CMake 3.2
 ./scripts/build-release.sh
 ```
 
-This builds and tests both bundles, ad-hoc signs them for local use, verifies their signatures, and creates `dist/RegionBounce-macOS.zip`.
+This builds and tests both bundles, ad-hoc signs them for local use, verifies their signatures, and creates three archives in `dist/`: `RegionBounce-macOS.zip` (both bundles), `RegionBounce-ScreenSaver.zip`, and `RegionBounce-Preview.zip`. Each archive includes installation instructions and the MIT license.
 
 To run the preview app:
 
